@@ -1,10 +1,10 @@
 from core.supabase_client import SupabaseManager
 
 if __name__ == "__main__":
-    print("🚀 Testando conexão com o Supabase...")
+    print("Testando conexão com o Supabase...")
     db = SupabaseManager()
 
-    # Dados simulados de teste para nota de saída
+    # Simulando qualquer dado para ver se salva dentro do banco
     nota_teste = [{
         "id": 999999999,
         "numero": "101",
@@ -18,5 +18,5 @@ if __name__ == "__main__":
         "cliente_documento": "000.000.000-00"
     }]
 
-    # Inserir no Supabase
+    # Inserindo dados ficticios dentro da tabela
     db.salvar_notas_saida(nota_teste)

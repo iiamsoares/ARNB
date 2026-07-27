@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kanban de Automação - Bling, Supabase & Excel</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --bg-card-hover: #334155;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-purple: #8b5cf6;
+            --accent-blue: #3b82f6;
+            --accent-emerald: #10b981;
+            --accent-amber: #f59e0b;
+            --accent-rose: #f43f5e;
+            --border-color: rgba(255, 255, 255, 0.08);
+            --shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9));
+            padding: 1.5rem 2rem;
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            backdrop-filter: blur(12px);
+        }
+
+        .header-title h1 {
+            font-size: 1.75rem;
+            font-weight: 800;
+            background: linear-gradient(90deg, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.25rem;
+        }
+
+        .header-title p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .progress-container {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            background: rgba(15, 23, 42, 0.6);
+            padding: 0.75rem 1.25rem;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .progress-bar-bg {
+            width: 160px;
+            height: 10px;
+            background: #334155;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-emerald));
+            transition: width 0.4s ease;
+        }
+
+        .progress-text {
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: var(--accent-emerald);
+        }
+
+        .kanban-board {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1.5rem;
+            align-items: start;
+        }
+
+        .column {
+            background: var(--bg-card);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            min-height: 500px;
+        }
+
+        .column-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .column-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .badge-count {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .task-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+            min-height: 400px;
+        }
+
+        .task-card {
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1rem;
+            cursor: grab;
+            transition: all 0.25s ease;
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+
+        .task-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: var(--shadow);
+            background: var(--bg-card-hover);
+        }
+
+        .task-card.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+
+        .task-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            line-height: 1.4;
+        }
+
+        .tag {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 0.25rem 0.55rem;
+            border-radius: 6px;
+            letter-spacing: 0.5px;
+            width: fit-content;
+        }
+
+        .tag-setup { background: rgba(59, 130, 246, 0.2); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.3); }
+        .tag-supabase { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.3); }
+        .tag-bling { background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.3); }
+        .tag-excel { background: rgba(139, 92, 246, 0.2); color: #c4b5fd; border: 1px solid rgba(139, 92, 246, 0.3); }
+        .tag-orchestrator { background: rgba(244, 63, 94, 0.2); color: #fca5a5; border: 1px solid rgba(244, 63, 94, 0.3); }
+
+        .task-desc {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        .task-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 0.25rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .task-actions {
+            display: flex;
+            gap: 0.4rem;
+        }
+
+        .btn-move {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            padding: 0.2rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-move:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: var(--text-main);
+        }
+
+        footer {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-top: auto;
+            padding-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-title">
+            <h1>🚀 Kanban - Automação Bling, Supabase & Excel</h1>
+            <p>Trilha de Desenvolvimento Hands-on | Mentoria Senior</p>
+        </div>
+        <div class="progress-container">
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fill" id="progressBar"></div>
+            </div>
+            <span class="progress-text" id="progressText">0% Concluído</span>
+        </div>
+    </header>
+
+    <div class="kanban-board">
+        <!-- Coluna 1: A Fazer -->
+        <div class="column" data-status="todo">
+            <div class="column-header">
+                <div class="column-title">
+                    <span style="color: var(--accent-amber);">📌</span> A Fazer
+                </div>
+                <span class="badge-count" id="count-todo">0</span>
+            </div>
+            <div class="task-list" id="list-todo"></div>
+        </div>
+
+        <!-- Coluna 2: Em Progresso -->
+        <div class="column" data-status="in_progress">
+            <div class="column-header">
+                <div class="column-title">
+                    <span style="color: var(--accent-blue);">⚡</span> Em Progresso
+                </div>
+                <span class="badge-count" id="count-in_progress">0</span>
+            </div>
+            <div class="task-list" id="list-in_progress"></div>
+        </div>
+
+        <!-- Coluna 3: Concluído -->
+        <div class="column" data-status="done">
+            <div class="column-header">
+                <div class="column-title">
+                    <span style="color: var(--accent-emerald);">✅</span> Concluído
+                </div>
+                <span class="badge-count" id="count-done">0</span>
+            </div>
+            <div class="task-list" id="list-done"></div>
+        </div>
+    </div>
+
+    <footer>
+        <p>Projeto de Automação de Relatórios Diários de Vendas & Devs - 2026</p>
+    </footer>
+
+    <script>
+        const initialTasks = [
+            {
+                id: 'task-1',
+                title: 'Estruturação Inicial de Pastas',
+                desc: 'Criar pastas config, core, database, relatorios_excel e logs.',
+                tag: 'tag-setup',
+                tagName: 'Setup',
+                status: 'done'
+            },
+            {
+                id: 'task-2',
+                title: 'Ambiente Virtual (.venv) e Dependências',
+                desc: 'Criar .venv e instalar requests, supabase, pandas, openpyxl, python-dotenv.',
+                tag: 'tag-setup',
+                tagName: 'Setup',
+                status: 'done'
+            },
+            {
+                id: 'task-3',
+                title: 'Configurar Arquivo .env',
+                desc: 'Criar o arquivo .env com credenciais do Supabase (URL/KEY) e do Bling (Tokens).',
+                tag: 'tag-setup',
+                tagName: 'Setup',
+                status: 'in_progress'
+            },
+            {
+                id: 'task-4',
+                title: 'Modelagem SQL no Supabase',
+                desc: 'Criar as tabelas Notas_Fiscais_Saidas_2026 e Notas_Fiscais_Entradas_2026 no Supabase.',
+                tag: 'tag-supabase',
+                tagName: 'Supabase',
+                status: 'todo'
+            },
+            {
+                id: 'task-5',
+                title: 'Módulo Supabase (core/supabase_client.py)',
+                desc: 'Criar código em Python para realizar a conexão e o Upsert de dados no Supabase.',
+                tag: 'tag-supabase',
+                tagName: 'Supabase',
+                status: 'todo'
+            },
+            {
+                id: 'task-6',
+                title: 'Autenticação API Bling v3',
+                desc: 'Obter Access Token e implementar renovação via Refresh Token.',
+                tag: 'tag-bling',
+                tagName: 'Bling API',
+                status: 'todo'
+            },
+            {
+                id: 'task-7',
+                title: 'Módulo Bling Client (core/bling_client.py)',
+                desc: 'Criar requisições HTTP para buscar NF-e de Saída e NF-e de Entrada com filtro por data.',
+                tag: 'tag-bling',
+                tagName: 'Bling API',
+                status: 'todo'
+            },
+            {
+                id: 'task-8',
+                title: 'Pipeline ETL (Normalização)',
+                desc: 'Mapear e formatar os JSONs retornados pelo Bling no modelo exato das tabelas Supabase.',
+                tag: 'tag-orchestrator',
+                tagName: 'ETL',
+                status: 'todo'
+            },
+            {
+                id: 'task-9',
+                title: 'Módulo Excel Generator (core/excel_generator.py)',
+                desc: 'Extrair dados do Supabase e gerar arquivo .xlsx com Abas: Resumo, Saídas e Entradas.',
+                tag: 'tag-excel',
+                tagName: 'Excel',
+                status: 'todo'
+            },
+            {
+                id: 'task-10',
+                title: 'Orquestrador Principal (main.py)',
+                desc: 'Unificar a execução completa: Bling -> Supabase -> Geração da Planilha Excel.',
+                tag: 'tag-orchestrator',
+                tagName: 'Orquestração',
+                status: 'todo'
+            },
+            {
+                id: 'task-11',
+                title: 'Agendador de Tarefas (scheduler.py)',
+                desc: 'Configurar a execução automática diária do script.',
+                tag: 'tag-orchestrator',
+                tagName: 'Agendamento',
+                status: 'todo'
+            }
+        ];
+
+        // Carregar tarefas do localStorage ou usar o padrão inicial
+        let tasks = JSON.parse(localStorage.getItem('kanban_tasks')) || initialTasks;
+
+        function saveTasks() {
+            localStorage.setItem('kanban_tasks', JSON.stringify(tasks));
+            renderKanban();
+        }
+
+        function moveTask(id, newStatus) {
+            tasks = tasks.map(task => task.id === id ? { ...task, status: newStatus } : task);
+            saveTasks();
+        }
+
+        function renderKanban() {
+            const listTodo = document.getElementById('list-todo');
+            const listInProgress = document.getElementById('list-in_progress');
+            const listDone = document.getElementById('list-done');
+
+            listTodo.innerHTML = '';
+            listInProgress.innerHTML = '';
+            listDone.innerHTML = '';
+
+            let countTodo = 0, countInProgress = 0, countDone = 0;
+
+            tasks.forEach(task => {
+                const card = document.createElement('div');
+                card.className = 'task-card';
+                card.draggable = true;
+                card.id = task.id;
+
+                let actionButtons = '';
+                if (task.status === 'todo') {
+                    countTodo++;
+                    actionButtons = `<button class="btn-move" onclick="moveTask('${task.id}', 'in_progress')">Iniciar ⚡</button>`;
+                } else if (task.status === 'in_progress') {
+                    countInProgress++;
+                    actionButtons = `
+                        <button class="btn-move" onclick="moveTask('${task.id}', 'todo')">⬅ Voltar</button>
+                        <button class="btn-move" onclick="moveTask('${task.id}', 'done')">Concluir ✅</button>
+                    `;
+                } else if (task.status === 'done') {
+                    countDone++;
+                    actionButtons = `<button class="btn-move" onclick="moveTask('${task.id}', 'in_progress')">Reabrir ↩</button>`;
+                }
+
+                card.innerHTML = `
+                    <div class="task-header">
+                        <span class="tag ${task.tag}">${task.tagName}</span>
+                    </div>
+                    <div class="task-title">${task.title}</div>
+                    <div class="task-desc">${task.desc}</div>
+                    <div class="task-footer">
+                        <div class="task-actions">${actionButtons}</div>
+                    </div>
+                `;
+
+                // Drag Events
+                card.addEventListener('dragstart', (e) => {
+                    card.classList.add('dragging');
+                    e.dataTransfer.setData('text/plain', task.id);
+                });
+
+                card.addEventListener('dragend', () => {
+                    card.classList.remove('dragging');
+                });
+
+                if (task.status === 'todo') listTodo.appendChild(card);
+                if (task.status === 'in_progress') listInProgress.appendChild(card);
+                if (task.status === 'done') listDone.appendChild(card);
+            });
+
+            // Atualizar contadores
+            document.getElementById('count-todo').textContent = countTodo;
+            document.getElementById('count-in_progress').textContent = countInProgress;
+            document.getElementById('count-done').textContent = countDone;
+
+            // Atualizar barra de progresso
+            const total = tasks.length;
+            const pct = Math.round((countDone / total) * 100);
+            document.getElementById('progressBar').style.width = pct + '%';
+            document.getElementById('progressText').textContent = pct + '% Concluído';
+        }
+
+        // Setup Drag & Drop nas colunas
+        document.querySelectorAll('.column').forEach(column => {
+            column.addEventListener('dragover', (e) => {
+                e.preventDefault();
+            });
+
+            column.addEventListener('drop', (e) => {
+                e.preventDefault();
+                const taskId = e.dataTransfer.getData('text/plain');
+                const newStatus = column.getAttribute('data-status');
+                if (taskId && newStatus) {
+                    moveTask(taskId, newStatus);
+                }
+            });
+        });
+
+        // Renderização Inicial
+        renderKanban();
+    </script>
+</body>
+</html>

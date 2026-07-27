@@ -1,0 +1,18 @@
+# Ignora variáveis de ambiente, dados do Supabase
+.env
+.venv/
+venv/
+
+# Ignorando dados de produção e logs
+logs/*.log
+relatorios_excel/*.xlsx
+
+# Arquivos do sistema
+.DS_Store
+Thumbs.db
+
+# Ignorando o kanban para acompanhamento do projeto
+kaban.html
+*.pycache
+__pycache__
+requisitos.md

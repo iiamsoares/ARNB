@@ -12,7 +12,7 @@ relatorios_excel/*.xlsx
 Thumbs.db
 
 # Ignorando o kanban para acompanhamento do projeto
-kaban.html
+kanban.html
 *.pycache
 __pycache__
 requisitos.md

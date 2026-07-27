@@ -115,4 +115,4 @@ class BlingClient:
             return dados.get("data", {})
         else:
             print(f"Erro ao consultar detalhes da nota {{id_nota}}: {{resposta.status_code}}: {resposta.text}")
-            return {}        
+            return {}           
